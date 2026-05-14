@@ -1,335 +1,332 @@
-const SOURCE_YELLOW_COLORS = [
-  '#ffd428',  // kuning utama
-  '#f7e28b',  // highlight terang
-  '#ffeb8a',
-  '#ffe066',
-  '#ffc107',
-  '#e6a800',
-  '#b58600'
-];
+ <script>
+    /* ─── FAVORIT/KONTAK refs + openContactModal + closeContactModal + popstate ─── */
+    /* ─── FAVORIT / KONTAK ─── */
+    var CONTACT_STORAGE_KEY = 'userteleponSMS';
 
+    var contactHistoryPushed = false;
 
-    const THRESHOLD = 0.16;
-
-    function hexToRgb(hex) {
-      hex = String(hex).replace('#', '').trim();
-
-      if (hex.length === 3) {
-        hex = hex.split('').map(function (c) {
-          return c + c;
-        }).join('');
+    function openContactModal() {
+      var modal = document.getElementById('contactModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      modal.classList.add('show');
+      refreshContactList();
+      // Push history state agar tombol Back menutup modal favorit
+      if (!contactHistoryPushed) {
+        history.pushState({ contactModal: true }, '');
+        contactHistoryPushed = true;
       }
-
-      return {
-        r: parseInt(hex.slice(0, 2), 16),
-        g: parseInt(hex.slice(2, 4), 16),
-        b: parseInt(hex.slice(4, 6), 16)
-      };
     }
 
-    function rgbToHsl(r, g, b) {
-      r /= 255;
-      g /= 255;
-      b /= 255;
-
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-
-      let h = 0;
-      let s = 0;
-      const l = (max + min) / 2;
-
-      if (max !== min) {
-        const d = max - min;
-
-        s = l > 0.5
-          ? d / (2 - max - min)
-          : d / (max + min);
-
-        switch (max) {
-          case r:
-            h = (g - b) / d + (g < b ? 6 : 0);
-            break;
-          case g:
-            h = (b - r) / d + 2;
-            break;
-          case b:
-            h = (r - g) / d + 4;
-            break;
-        }
-
-        h /= 6;
-      }
-
-      return { h: h, s: s, l: l };
-    }
-
-    function hslToRgb(h, s, l) {
-      let r;
-      let g;
-      let b;
-
-      function hue2rgb(p, q, t) {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1 / 6) return p + (q - p) * 6 * t;
-        if (t < 1 / 2) return q;
-        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-        return p;
-      }
-
-      if (s === 0) {
-        r = g = b = l;
+    function closeContactModal(opts) {
+      var fromPopstate = opts && opts.fromPopstate;
+      var modal = document.getElementById('contactModal');
+      if (!modal) return;
+      modal.style.display = 'none';
+      modal.classList.remove('show');
+      if (contactHistoryPushed && !fromPopstate) {
+        contactHistoryPushed = false;
+        history.back();
       } else {
-        const q = l < 0.5
-          ? l * (1 + s)
-          : l + s - l * s;
-
-        const p = 2 * l - q;
-
-        r = hue2rgb(p, q, h + 1 / 3);
-        g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1 / 3);
+        contactHistoryPushed = false;
       }
-
-      return {
-        r: Math.round(r * 255),
-        g: Math.round(g * 255),
-        b: Math.round(b * 255)
-      };
     }
 
-    function rgbDistance(a, b) {
-      const dr = a[0] - b[0];
-      const dg = a[1] - b[1];
-      const db = a[2] - b[2];
-
-      return Math.sqrt(dr * dr + dg * dg + db * db);
-    }
-
-    function normalizeRgbArray(arr) {
-      return [
-        Number(arr[0]),
-        Number(arr[1]),
-        Number(arr[2])
-      ];
-    }
-
-    function rgb255ToLottie(rgb) {
-      return [
-        rgb.r / 255,
-        rgb.g / 255,
-        rgb.b / 255,
-        1
-      ];
-    }
-
-    function buildPalette(targetHex) {
-  const targetRgb = hexToRgb(targetHex);
-  const targetHsl = rgbToHsl(targetRgb.r, targetRgb.g, targetRgb.b);
-
-  // Lightness rata-rata palet sumber (kuning ~0.55)
-  const sourceLs = SOURCE_YELLOW_COLORS.map(function (hex) {
-    const rgb = hexToRgb(hex);
-    return rgbToHsl(rgb.r, rgb.g, rgb.b).l;
-  });
-  const sourceMidL = sourceLs.reduce(function (a, b) { return a + b; }, 0) / sourceLs.length;
-
-  return SOURCE_YELLOW_COLORS.map(function (sourceHex, i) {
-    const sourceRgb = hexToRgb(sourceHex);
-    const sourceHsl = rgbToHsl(sourceRgb.r, sourceRgb.g, sourceRgb.b);
-
-    // Geser lightness sumber agar pusatnya = lightness target
-    const delta = sourceHsl.l - sourceMidL;
-    let newL = targetHsl.l + delta;
-    if (newL < 0.05) newL = 0.05;
-    if (newL > 0.95) newL = 0.95;
-
-    const mappedRgb = hslToRgb(targetHsl.h, targetHsl.s, newL);
-
-    return {
-      source: rgb255ToLottie(sourceRgb).slice(0, 3),
-      target: rgb255ToLottie(mappedRgb)
-    };
-  });
-}
-
-
-    function findNearestColor(color, palette) {
-      let nearest = null;
-      let nearestDistance = Infinity;
-
-      palette.forEach(function (item) {
-        const distance = rgbDistance(color, item.source);
-
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearest = item;
-        }
-      });
-
-      if (nearest && nearestDistance <= THRESHOLD) {
-        return nearest.target;
+    window.addEventListener('popstate', function () {
+      var modal = document.getElementById('contactModal');
+      if (modal && modal.classList.contains('show')) {
+        closeContactModal({ fromPopstate: true });
       }
+    });
+  </script>
 
-      return null;
-    }
+  <script>
+    /* ─── refreshContactList ─── */
+    function refreshContactList() {
+      var container = document.getElementById('modalContactList');
+      var deleteAllBtn = document.querySelector('.delete-all-btn');
+      var contacts = [];
+      var raw;
+      var html = '';
+      var i;
+      var c;
+      var safeNumber;
 
-    function recolorValue(value, palette) {
-      if (!Array.isArray(value)) return value;
-      if (value.length < 3) return value;
+      if (!container) return;
 
-      const color = normalizeRgbArray(value);
-      const replacement = findNearestColor(color, palette);
-
-      if (!replacement) return value;
-
-      return [
-        replacement[0],
-        replacement[1],
-        replacement[2],
-        value.length > 3 ? value[3] : 1
-      ];
-    }
-
-    function recolorLottie(obj, palette) {
-      if (Array.isArray(obj)) {
-        return obj.map(function (item) {
-          return recolorLottie(item, palette);
-        });
-      }
-
-      if (obj && typeof obj === 'object') {
-        const copy = {};
-
-        Object.keys(obj).forEach(function (key) {
-          copy[key] = recolorLottie(obj[key], palette);
-        });
-
-        if (
-          copy.c &&
-          copy.c.k &&
-          Array.isArray(copy.c.k) &&
-          copy.c.k.length >= 3 &&
-          typeof copy.c.k[0] === 'number'
-        ) {
-          copy.c.k = recolorValue(copy.c.k, palette);
-        }
-
-        if (
-          copy.g &&
-          copy.g.k &&
-          copy.g.k.k &&
-          Array.isArray(copy.g.k.k)
-        ) {
-          copy.g.k.k = copy.g.k.k.map(function (item, index, arr) {
-            if ((index - 1) % 4 === 0) {
-              const color = [
-                item,
-                arr[index + 1],
-                arr[index + 2]
-              ];
-
-              const replacement = findNearestColor(color, palette);
-
-              if (replacement) {
-                return replacement[0];
-              }
-            }
-
-            if ((index - 2) % 4 === 0) {
-              const color = [
-                arr[index - 1],
-                item,
-                arr[index + 1]
-              ];
-
-              const replacement = findNearestColor(color, palette);
-
-              if (replacement) {
-                return replacement[1];
-              }
-            }
-
-            if ((index - 3) % 4 === 0) {
-              const color = [
-                arr[index - 2],
-                arr[index - 1],
-                item
-              ];
-
-              const replacement = findNearestColor(color, palette);
-
-              if (replacement) {
-                return replacement[2];
-              }
-            }
-
-            return item;
-          });
-        }
-
-        return copy;
-      }
-
-      return obj;
-    }
-
-    async function loadJsonFromUrl(url) {
-      const response = await fetch(url, {
-        cache: 'no-store'
-      });
-
-      const text = await response.text();
-      const cleanText = text.trim();
-
-      if (!response.ok) {
-        throw new Error('URL Lottie gagal dibuka. Status: ' + response.status);
-      }
-
-      if (
-        !cleanText.startsWith('{') &&
-        !cleanText.startsWith('[')
-      ) {
-        console.log('[Lottie recolor] Isi response bukan JSON:', cleanText.slice(0, 120));
-        throw new Error('File Lottie bukan JSON murni. Cek URL src lottie-player.');
-      }
-
-      return JSON.parse(cleanText);
-    }
-
-    function objectToDataUrl(obj) {
-      const json = JSON.stringify(obj);
-      const encoded = btoa(unescape(encodeURIComponent(json)));
-
-      return 'data:application/json;base64,' + encoded;
-    }
-
-    async function applyLottieColor() {
+      raw = localStorage.getItem(CONTACT_STORAGE_KEY);
       try {
-        await customElements.whenDefined('lottie-player');
+        contacts = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        contacts = [];
+      }
 
-        const player = document.getElementById('empty-lottie');
+      console.log('Data kontak tersimpan:', JSON.stringify(contacts, null, 2));
 
-        if (!player) return;
+      if (contacts.length > 0) {
+        for (i = 0; i < contacts.length; i++) {
+          c = contacts[i] || {};
+          safeNumber = String(c.number || '').replace(/'/g, "\\'");
+          html += '<div class="contact-item">' +
+            '<div onclick="selectContact(\'' + safeNumber + '\')" style="flex:1;">' +
+              '<strong>' + String(c.name || '') + '</strong>' +
+              '<div>' + String(c.number || '') + '</div>' +
+            '</div>' +
+            '<button type="button" class="delete-btn" onclick="deleteContact(' + i + ')">Hapus</button>' +
+          '</div>';
+        }
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = '<p>Tidak ada daftar kontak.</p>';
+      }
 
-        const src = player.getAttribute('src');
-
-        
-
-        const originalJson = await loadJsonFromUrl(src);
-        const palette = buildPalette(FIXED_LOTTIE_COLOR);
-        const recoloredJson = recolorLottie(originalJson, palette);
-        const dataUrl = objectToDataUrl(recoloredJson);
-
-        player.removeAttribute('src');
-        player.load(dataUrl);
-      } catch (error) {
-        console.error('[Lottie recolor] gagal:', error);
+      if (deleteAllBtn) {
+        deleteAllBtn.style.display = contacts.length > 1 ? 'block' : 'none';
       }
     }
+  </script>
 
-    applyLottieColor();
+  <script>
+    /* ─── deleteContact ─── */
+    function deleteContact(index) {
+      var contacts = [];
+      var raw = localStorage.getItem(CONTACT_STORAGE_KEY);
+      try {
+        contacts = raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        contacts = [];
+      }
 
-    window.refreshLottieColor = applyLottieColor;
-  })();
+      if (contacts.length > index) {
+        contacts.splice(index, 1);
+        localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify(contacts));
+        refreshContactList();
+      }
+    }
+  </script>
+
+  <script>
+    /* ─── showConfirmModal ─── */
+    /* ─── MODAL KONFIRMASI MODERN ─── */
+    function showConfirmModal(opts) {
+      opts = opts || {};
+      var modal = document.getElementById('confirmModal');
+      if (!modal) {
+        if (confirm(opts.message || 'Apakah Anda yakin?')) {
+          if (typeof opts.onConfirm === 'function') opts.onConfirm();
+        }
+        return;
+      }
+      var titleEl   = document.getElementById('confirmTitle');
+      var msgEl     = document.getElementById('confirmMessage');
+      var okBtn     = document.getElementById('confirmOkBtn');
+      var cancelBtn = document.getElementById('confirmCancelBtn');
+
+      if (titleEl) titleEl.textContent = opts.title || 'Konfirmasi';
+      if (msgEl)   msgEl.textContent   = opts.message || 'Apakah Anda yakin?';
+      if (okBtn)   okBtn.textContent   = opts.okText || 'Hapus';
+      if (cancelBtn) cancelBtn.textContent = opts.cancelText || 'Batal';
+
+      function close() {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onBackdrop);
+        document.removeEventListener('keydown', onKey);
+      }
+      function onOk() {
+        close();
+        if (typeof opts.onConfirm === 'function') opts.onConfirm();
+      }
+      function onCancel() {
+        close();
+        if (typeof opts.onCancel === 'function') opts.onCancel();
+      }
+      function onBackdrop(e) { if (e.target === modal) onCancel(); }
+      function onKey(e) { if (e.key === 'Escape') onCancel(); }
+
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      modal.addEventListener('click', onBackdrop);
+      document.addEventListener('keydown', onKey);
+
+      modal.style.display = 'flex';
+      requestAnimationFrame(function () { modal.classList.add('show'); });
+    }
+    window.showConfirmModal = showConfirmModal;
+  </script>
+
+  <script>
+    /* ─── deleteAllContacts ─── */
+    function deleteAllContacts() {
+      var raw = localStorage.getItem(CONTACT_STORAGE_KEY);
+      var contacts = [];
+      try { contacts = raw ? JSON.parse(raw) : []; } catch (e) { contacts = []; }
+      if (!contacts.length) return;
+
+      showConfirmModal({
+        title: 'Hapus Semua Kontak?',
+        message: 'Semua ' + contacts.length + ' kontak favorit yang tersimpan akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.',
+        okText: 'Hapus Semua',
+        cancelText: 'Batal',
+        onConfirm: function () {
+          localStorage.removeItem(CONTACT_STORAGE_KEY);
+          refreshContactList();
+          if (typeof showToast === 'function') showToast('Semua kontak favorit dihapus');
+        }
+      });
+    }
+  </script>
+
+  <script>
+    /* ─── selectContact ─── */
+    function selectContact(number) {
+      var nomorHPInput = document.getElementById('phoneNumber');
+      if (!nomorHPInput) return;
+      nomorHPInput.value = number;
+      nomorHPInput.dispatchEvent(new Event('input'));
+      if (typeof formatNomorHP === 'function') formatNomorHP(nomorHPInput);
+      if (typeof handlePhoneChange === 'function') handlePhoneChange();
+      closeContactModal();
+    }
+  </script>
+
+  <script>
+    /* ─── window exports + contactForm submit + contactModal click + init ─── */
+    window.openContactModal = openContactModal;
+    window.closeContactModal = closeContactModal;
+    window.deleteContact = deleteContact;
+    window.deleteAllContacts = deleteAllContacts;
+    window.selectContact = selectContact;
+
+    var contactFormEl = document.getElementById('contactForm');
+    if (contactFormEl) {
+      contactFormEl.addEventListener('submit', function (e) {
+        var name = document.getElementById('contactName').value.trim();
+        var number = document.getElementById('contactNumber').value.trim();
+        var contacts = [];
+        var raw = localStorage.getItem(CONTACT_STORAGE_KEY);
+
+        e.preventDefault();
+
+        if (!name || !number) {
+          alert('Nama dan Nomor HP tidak boleh kosong!');
+          return;
+        }
+
+        if (!/^\d+$/.test(number)) {
+          alert('Nomor HP hanya boleh mengandung angka');
+          return;
+        }
+
+        try {
+          contacts = raw ? JSON.parse(raw) : [];
+        } catch (err) {
+          contacts = [];
+        }
+
+        contacts.push({
+          name: name,
+          number: number
+        });
+        localStorage.setItem(CONTACT_STORAGE_KEY, JSON.stringify(contacts));
+
+        console.log('Kontak baru:', JSON.stringify({ name: name, number: number }));
+
+        this.reset();
+        refreshContactList();
+      });
+    }
+
+    var contactModalEl = document.getElementById('contactModal');
+    if (contactModalEl) {
+      contactModalEl.addEventListener('click', function (e) {
+        if (e.target === contactModalEl) closeContactModal();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', refreshContactList);
+    refreshContactList();
+  </script>
+
+  <script>
+    /* ─── INFO MODAL (open/close/popstate/listeners) ─── */
+    /* ─── INFO MODAL ─── */
+    var infoHistoryPushed = false;
+    function openInfoModal() {
+      var modal = document.getElementById('infoModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      requestAnimationFrame(function () { modal.classList.add('show'); });
+      document.body.style.overflow = 'hidden';
+      if (!infoHistoryPushed) {
+        history.pushState({ infoModal: true }, '');
+        infoHistoryPushed = true;
+      }
+    }
+    function closeInfoModal(opts) {
+      var fromPopstate = opts && opts.fromPopstate;
+      var modal = document.getElementById('infoModal');
+      if (!modal) return;
+      modal.classList.remove('show');
+      setTimeout(function () { modal.style.display = 'none'; }, 200);
+      document.body.style.overflow = '';
+      if (infoHistoryPushed && !fromPopstate) {
+        infoHistoryPushed = false;
+        history.back();
+      } else {
+        infoHistoryPushed = false;
+      }
+    }
+    window.openInfoModal = openInfoModal;
+    window.closeInfoModal = closeInfoModal;
+
+    window.addEventListener('popstate', function () {
+      var m = document.getElementById('infoModal');
+      if (m && m.classList.contains('show')) {
+        closeInfoModal({ fromPopstate: true });
+      }
+    });
+
+    var infoModalEl = document.getElementById('infoModal');
+    if (infoModalEl) {
+      infoModalEl.addEventListener('click', function (e) {
+        if (e.target === infoModalEl) closeInfoModal();
+      });
+      var infoCloseBtn = document.getElementById('infoCloseBtn');
+      if (infoCloseBtn) infoCloseBtn.addEventListener('click', closeInfoModal);
+      var infoOkBtn = document.getElementById('infoOkBtn');
+      if (infoOkBtn) infoOkBtn.addEventListener('click', closeInfoModal);
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var m = document.getElementById('infoModal');
+        if (m && m.style.display === 'flex') closeInfoModal();
+      }
+    });
+  </script>
+
+  <script>
+    /* ─── STICKY OPERATOR CARD ─── */
+    /* Penanda visual saat operator-card menempel di atas (scroll-based, anti-jitter) */
+    (function () {
+      var card = document.querySelector('.operator-card');
+      if (!card) return;
+      var ticking = false;
+      function update() {
+        var rect = card.getBoundingClientRect();
+        // Saat top card menyentuh/tertahan di posisi 0 (atau di atasnya)
+        var stuck = rect.top <= 0;
+        card.classList.toggle('is-stuck', stuck);
+        ticking = false;
+      }
+      window.addEventListener('scroll', function () {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      }, { passive: true });
+      update();
+    })();
+  </script>
