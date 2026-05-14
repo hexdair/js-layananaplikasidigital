@@ -1,4 +1,4 @@
- <script>
+ 
     /* ─── FAVORIT/KONTAK refs + openContactModal + closeContactModal + popstate ─── */
     /* ─── FAVORIT / KONTAK ─── */
     var CONTACT_STORAGE_KEY = 'userteleponSMS';
@@ -38,9 +38,9 @@
         closeContactModal({ fromPopstate: true });
       }
     });
-  </script>
+  
 
-  <script>
+  
     /* ─── refreshContactList ─── */
     function refreshContactList() {
       var container = document.getElementById('modalContactList');
@@ -84,9 +84,9 @@
         deleteAllBtn.style.display = contacts.length > 1 ? 'block' : 'none';
       }
     }
-  </script>
+ 
 
-  <script>
+  
     /* ─── deleteContact ─── */
     function deleteContact(index) {
       var contacts = [];
@@ -103,9 +103,9 @@
         refreshContactList();
       }
     }
-  </script>
+  
 
-  <script>
+  
     /* ─── showConfirmModal ─── */
     /* ─── MODAL KONFIRMASI MODERN ─── */
     function showConfirmModal(opts) {
@@ -155,9 +155,9 @@
       requestAnimationFrame(function () { modal.classList.add('show'); });
     }
     window.showConfirmModal = showConfirmModal;
-  </script>
+  
 
-  <script>
+  
     /* ─── deleteAllContacts ─── */
     function deleteAllContacts() {
       var raw = localStorage.getItem(CONTACT_STORAGE_KEY);
@@ -177,9 +177,9 @@
         }
       });
     }
-  </script>
+  
 
-  <script>
+  
     /* ─── selectContact ─── */
     function selectContact(number) {
       var nomorHPInput = document.getElementById('phoneNumber');
@@ -190,9 +190,9 @@
       if (typeof handlePhoneChange === 'function') handlePhoneChange();
       closeContactModal();
     }
-  </script>
+  
 
-  <script>
+  
     /* ─── window exports + contactForm submit + contactModal click + init ─── */
     window.openContactModal = openContactModal;
     window.closeContactModal = closeContactModal;
@@ -248,9 +248,9 @@
 
     document.addEventListener('DOMContentLoaded', refreshContactList);
     refreshContactList();
-  </script>
+  
 
-  <script>
+  
     /* ─── INFO MODAL (open/close/popstate/listeners) ─── */
     /* ─── INFO MODAL ─── */
     var infoHistoryPushed = false;
@@ -305,9 +305,9 @@
         if (m && m.style.display === 'flex') closeInfoModal();
       }
     });
-  </script>
+  
 
-  <script>
+  
     /* ─── STICKY OPERATOR CARD ─── */
     /* Penanda visual saat operator-card menempel di atas (scroll-based, anti-jitter) */
     (function () {
@@ -329,4 +329,4 @@
       }, { passive: true });
       update();
     })();
-  </script>
+  
