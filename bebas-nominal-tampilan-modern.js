@@ -1,3 +1,105 @@
+/* ─── resetSubSelects + clearProducts + handlePhoneChange + phone events ─── */
+    /* ─── HANDLE PHONE INPUT ─── */
+    function resetSubSelects() {
+      selectByuTelkomselWrap.classList.remove('show');
+      selectXlAxisWrap.classList.remove('show');
+      selectByuTelkomselWrap.querySelectorAll('.op-tab').forEach(b => b.classList.remove('active'));
+      selectXlAxisWrap.querySelectorAll('.op-tab').forEach(b => b.classList.remove('active'));
+    }
+
+    function setActiveOpTab(wrap, opKey) {
+      wrap.querySelectorAll('.op-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.op === opKey);
+      });
+    }
+
+    function clearProducts() {
+      productWrap.innerHTML = '';
+      subcatTabs.classList.remove('show');
+      subcatTabs.innerHTML = '';
+      currentProducts = [];
+    }
+
+    function handlePhoneChange() {
+      updateClearBtn();
+      const nomorHp = phoneInput.value.trim();
+
+      const matchedPrefix = prefixList.find(prefix => nomorHp.startsWith(prefix));
+
+      if (!matchedPrefix) {
+        lastFetchedPrefix = '';
+        // Jangan reset produk yang sudah difetch — produk berasal dari kategori "Ewallet bebas nominal"
+        // yang sama untuk semua operator. Cukup sembunyikan tab pemilih operator.
+        resetSubSelects();
+        return;
+      }
+
+      if (matchedPrefix === lastFetchedPrefix) return;
+      lastFetchedPrefix = matchedPrefix;
+
+      // Prefix 0851 → tampilkan tab ByU/Telkomsel (TANPA mereset produk yang sudah ditampilkan)
+      if (prefixByu.includes(matchedPrefix)) {
+        selectXlAxisWrap.classList.remove('show');
+        selectByuTelkomselWrap.classList.add('show');
+        // default highlight telkomsel
+        currentOperatorKey = 'telkomsel';
+        setActiveOpTab(selectByuTelkomselWrap, 'telkomsel');
+        setOperatorHead('telkomsel');
+        return;
+      }
+      // Prefix 0859 → tampilkan tab XL/Axis (TANPA mereset produk yang sudah ditampilkan)
+      if (prefixXLSpecific.includes(matchedPrefix)) {
+        selectByuTelkomselWrap.classList.remove('show');
+        selectXlAxisWrap.classList.add('show');
+        currentOperatorKey = 'xl';
+        setActiveOpTab(selectXlAxisWrap, 'xl');
+        setOperatorHead('xl');
+        return;
+      }
+
+      // Prefix lain: sembunyikan tab chooser, update header operator saja.
+      // Produk tetap dipertahankan karena kategori "Ewallet bebas nominal" sama untuk semua operator.
+      resetSubSelects();
+      if (prefixTelkomsel.includes(matchedPrefix)) {
+        currentOperatorKey = 'telkomsel'; setOperatorHead('telkomsel');
+      } else if (prefixAxis.includes(matchedPrefix)) {
+        currentOperatorKey = 'axis'; setOperatorHead('axis');
+      } else if (prefixXL.includes(matchedPrefix)) {
+        currentOperatorKey = 'xl'; setOperatorHead('xl');
+      } else if (prefixSmartfren.includes(matchedPrefix)) {
+        currentOperatorKey = 'smartfren'; setOperatorHead('smartfren');
+      } else if (prefixIndosat.includes(matchedPrefix)) {
+        currentOperatorKey = 'indosat'; setOperatorHead('indosat');
+      } else if (prefixTri.includes(matchedPrefix)) {
+        currentOperatorKey = 'tri'; setOperatorHead('tri');
+      }
+    }
+
+    phoneInput.addEventListener("input", () => { formatNomorHP(phoneInput); handlePhoneChange(); });
+    phoneInput.addEventListener("change", () => { formatNomorHP(phoneInput); handlePhoneChange(); });
+    phoneInput.addEventListener("paste", () => { setTimeout(() => { formatNomorHP(phoneInput); handlePhoneChange(); }, 0); });
+
+    // Tab click handlers — hanya update tampilan operator, JANGAN reset produk.
+    selectByuTelkomselWrap.querySelectorAll('.op-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.op;
+        currentOperatorKey = v;
+        setActiveOpTab(selectByuTelkomselWrap, v);
+        setOperatorHead(v);
+      });
+    });
+    selectXlAxisWrap.querySelectorAll('.op-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.op;
+        currentOperatorKey = v;
+        setActiveOpTab(selectXlAxisWrap, v);
+        setOperatorHead(v);
+      });
+    });
+
+
+
+
 
     /* ─── FAVORIT/KONTAK refs + openContactModal + closeContactModal + popstate ─── */
     /* ─── FAVORIT / KONTAK ─── */
